@@ -142,6 +142,9 @@ protected:
     double* rawAxes;
     double* outAxes;
 
+    //polar_r_theta coniguration
+    double update_angle_threshold;
+
     //variables read from the configuration file
     int  num_inputs;
     int  num_outputs;
@@ -163,6 +166,7 @@ public:
         rawAxes=0;
         rawHats=0;
         outAxes=0;
+        update_angle_threshold = 0;
         joy1=0;
         num_inputs=0;
         num_outputs=0;
@@ -190,6 +194,12 @@ public:
         {
             yInfo ( "Force configuration option found\n");
             force_cfg=true;
+        }
+
+        if (rf.findGroup("POLAR_R_THETA").check("update_angle_threshold"))
+        {
+            update_angle_threshold = rf.findGroup("POLAR_R_THETA").find("update_angle_threshold").asDouble();
+            yDebug("update_angle_threshold set to: %f", update_angle_threshold);
         }
 
         if (rf.findGroup("INPUTS").check("InputsNumber"))
@@ -590,15 +600,23 @@ public:
         {            
             if (jointProperties[i].type == JTYPE_POLAR)
             {
+                static double old_t = 0;
+                static double t = 0;
+                static double d = 0;
+                d = sqrt(pow((rawAxes[jointProperties[i].param[0]]), 2) + pow((rawAxes[jointProperties[i].param[1]]), 2));
+                old_t = t;
+                t = atan2((rawAxes[jointProperties[i].param[0]]), (rawAxes[jointProperties[i].param[1]])) * 180.0 / 3.14159265;
                 if (jointProperties[i].param[2] == 0)
                 {
-                    outAxes[i]= atan2(  (rawAxes[jointProperties[i].param[0]]),
-                                        (rawAxes[jointProperties[i].param[1]]) ) * 180.0 / 3.14159265;
+                    //update the angle only if the modulus is greater than a threshold && and its change rate is not huge.
+                    if (fabs(d) > update_angle_threshold && fabs(t-old_t) < 180)
+                    {
+                        outAxes[i] = t;
+                    }
                 }
                 else if (jointProperties[i].param[2] == 1)
                 {
-                    outAxes[i]= sqrt (  pow((rawAxes[jointProperties[i].param[0]]),2)+
-                                        pow((rawAxes[jointProperties[i].param[1]]),2) );
+                    outAxes[i] = d;
                 }
                 else
                 {

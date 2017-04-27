@@ -7,6 +7,8 @@
 SET(PROJECTNAME ethResources)
 PROJECT(${PROJECTNAME})
 
+SET(CMAKE_CXX_FLAGS "-std=c++11")
+
 
 option(ETHRES_DEBUG_DONTREADBACK "Compile EmbObj Library to run in testbed without EMS (will not work of course, just for debugging high level code)" FALSE)
 mark_as_advanced (ETHRES_DEBUG_DONTREADBACK)

@@ -44,6 +44,9 @@
 #define __embObjMotionControlh__
 
 
+#include <embot_tools.h>
+
+
 using namespace std;
 
 
@@ -275,6 +278,8 @@ class yarp::dev::embObjMotionControl:   public DeviceDriver,
 
 
 private:
+
+    std::vector<embot::tools::PeriodValidator> vectOfPeriodValidators;
 
     char boardIPstring[20];
 

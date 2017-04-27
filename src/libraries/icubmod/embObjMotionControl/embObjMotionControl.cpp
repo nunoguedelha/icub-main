@@ -540,6 +540,8 @@ embObjMotionControl::embObjMotionControl() :
     _impedance_params(0),
     _axesInfo(0)
 {
+    vectOfPeriodValidators.clear();
+
     _gearbox       = 0;
     _gearboxE2J      = 0;
     opened        = 0;
@@ -609,6 +611,8 @@ embObjMotionControl::embObjMotionControl() :
 embObjMotionControl::~embObjMotionControl()
 {
     yTrace() << "embObjMotionControl::~embObjMotionControl()";
+
+    vectOfPeriodValidators.clear();
 
     if(NULL != parser)
     {
@@ -777,6 +781,26 @@ bool embObjMotionControl::open(yarp::os::Searchable &config)
         {
             yDebug() << "embObjMotionControl::open() correctly starts mc service of board" << res->getName() << "IP" << res->getIPv4string();
         }
+    }
+
+    vectOfPeriodValidators.resize(_njoints);
+
+    const std::uint64_t periodUnderTestUSEC = 10*1000; // 10 ms
+    const std::uint64_t alertValueUSEC = 60*1000; // 60 ms instead 10 ms between torque estimates seems a good value to me
+    const std::uint64_t reportIntervalUSEC = 60*1000*1000; // every 60 seconds we print stats
+
+    const std::uint64_t histogramMinimumValue = 5*1000; // we want to measure between [5, 15) ms as teh first interval, where we expect a peak.
+    const std::uint64_t histogramMaximumValue = histogramMinimumValue + 120*1000; // we measure the full histogram between [5, 125) ms
+    const std::uint32_t histogramStep = 10*1000; // we measure at steps of 10 ms.
+
+    embot::tools::PeriodValidator::Config cfg(periodUnderTestUSEC, alertValueUSEC, reportIntervalUSEC, embot::tools::Histogram::Config(histogramMinimumValue, histogramMaximumValue, histogramStep));
+
+    std::uint64_t currtimeUSEC = static_cast<std::uint64_t>(1000000.0 * yarp::os::Time::now());
+    std::uint64_t delta = 0;
+    for(int i=0; i<vectOfPeriodValidators.size(); i++)
+    {
+        vectOfPeriodValidators[i].init(cfg);
+        vectOfPeriodValidators[i].tick(currtimeUSEC, delta);
     }
 
 
@@ -4089,11 +4113,62 @@ bool embObjMotionControl::updateMeasure(int userLevel_jointNumber, double &fTorq
 {
     int j = _axisMap[userLevel_jointNumber];
 
-    eOmeas_torque_t meas_torque = 0;
-    static double curr_time = Time::now();
-    static int    count_saturation=0;
 
-    meas_torque = (eOmeas_torque_t) S_32(_newtonsToSensor[j]*fTorque);
+    if(j < vectOfPeriodValidators.size())
+    {
+        std::uint64_t currtimeUSEC = static_cast<std::uint64_t>(1000000.0 * yarp::os::Time::now());
+        std::uint64_t delta = 0;
+
+        // we add the time. it the only regular action that we do ...
+        vectOfPeriodValidators[j].tick(currtimeUSEC, delta);
+
+        // we check if there is alert
+        if(true == vectOfPeriodValidators[j].alert(delta))
+        {
+            // print the delta as a warning message .. get the histogram and print it ...
+            yWarning() << "embObjMotionControl::updateMeasure(): on BOARD" << boardIPstring << ", JOINT" << j << ": delta is too big. It is" << delta << "micro-seconds";
+
+        }
+        else if(true == vectOfPeriodValidators[j].report())
+        {
+            const embot::tools::Histogram * histo = vectOfPeriodValidators[j].histogram();
+            std::vector<double> pdf;
+            histo->probabilitydensityfunction(pdf);
+            // print the stats as a debug message
+            yDebug() << "embObjMotionControl::updateMeasure(): on BOARD" << boardIPstring << ", JOINT" << j << ": regular report of deltas";
+            if(14 == pdf.size())
+            {
+                yDebug() <<
+                "p(d<5ms) ="            << pdf[0]   <<
+                "p(5ms<=d<10ms) = "     << pdf[1]   <<
+                "p(15ms<=d<25ms) = "    << pdf[2]   <<
+                "p(25ms<=d<35ms) = "    << pdf[3]   <<
+                "p(35ms<=d<45ms) = "    << pdf[4]   <<
+                "p(45ms<=d<55ms) = "    << pdf[5]   <<
+                "p(55ms<=d<65ms) = "    << pdf[6]   <<
+                "p(65ms<=d<75ms) = "    << pdf[7]   <<
+                "p(75ms<=d<85ms) = "    << pdf[8]   <<
+                "p(85ms<=d<95ms) = "    << pdf[9]   <<
+                "p(95ms<=d<105ms) = "   << pdf[10]  <<
+                "p(105ms<=d<115ms) = "  << pdf[11]  <<
+                "p(115ms<=d<125ms) = "  << pdf[12]  <<
+                "p(d>=125ms) ="         << pdf[13];
+            }
+            else
+            {
+                yDebug() << "... strange thing: pdf.size() is not 14 but" << pdf.size() << " .... LOOK at that!";
+            }
+
+            // now i reset statistics .??
+
+            vectOfPeriodValidators[j].reset();
+
+        }
+
+    }
+
+
+    eOmeas_torque_t meas_torque = (eOmeas_torque_t) S_32(_newtonsToSensor[j]*fTorque);
 
     eOprotID32_t protoid = eoprot_ID_get(eoprot_endpoint_motioncontrol, eoprot_entity_mc_joint, j, eoprot_tag_mc_joint_inputs_externallymeasuredtorque);
     return res->addSetMessageAndCacheLocally(protoid, (uint8_t*) &meas_torque);

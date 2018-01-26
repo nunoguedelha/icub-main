@@ -18,6 +18,8 @@ using namespace icub::robot_model;
 #define MARGIN 0.05
 #define PERIOD 0.01
 
+#define EOB -1
+
 class SafeMotionControl : 
 	public yarp::os::RateThread, 
 	public yarp::dev::DeviceDriver,
@@ -25,11 +27,102 @@ class SafeMotionControl :
     public yarp::dev::ISafeControl
 {
 public:
+    void init_maps()
+    {
+        int j = 0;
+        int b = 0;
+
+        brd_map[BRD_TORSO][b++] = j++; 
+        brd_map[BRD_TORSO][b++] = j++;
+        brd_map[BRD_TORSO][b++] = EOB;
+        
+        b = 0;
+
+        brd_map[BRD_LEFT_UPPER_ARM][b++] = j++;
+        brd_map[BRD_LEFT_UPPER_ARM][b++] = j++;
+        brd_map[BRD_LEFT_UPPER_ARM][b++] = j++;
+        brd_map[BRD_LEFT_UPPER_ARM][b++] = j++;
+        brd_map[BRD_LEFT_UPPER_ARM][b++] = EOB;
+
+        b = 0;
+
+        brd_map[BRD_LEFT_LOWER_ARM][b++] = j++;
+        brd_map[BRD_LEFT_LOWER_ARM][b++] = j++;
+        brd_map[BRD_LEFT_LOWER_ARM][b++] = j++;
+        brd_map[BRD_LEFT_LOWER_ARM][b++] = j++;
+        brd_map[BRD_LEFT_LOWER_ARM][b++] = EOB;
+
+        b = 0;
+
+        brd_map[BRD_RIGHT_UPPER_ARM][b++] = j++;
+        brd_map[BRD_RIGHT_UPPER_ARM][b++] = j++;
+        brd_map[BRD_RIGHT_UPPER_ARM][b++] = j++;
+        brd_map[BRD_RIGHT_UPPER_ARM][b++] = j++;
+        brd_map[BRD_RIGHT_UPPER_ARM][b++] = EOB;
+
+        b = 0;
+
+        brd_map[BRD_RIGHT_LOWER_ARM][b++] = j++;
+        brd_map[BRD_RIGHT_LOWER_ARM][b++] = j++;
+        brd_map[BRD_RIGHT_LOWER_ARM][b++] = j++;
+        brd_map[BRD_RIGHT_LOWER_ARM][b++] = j++;
+        brd_map[BRD_RIGHT_LOWER_ARM][b++] = EOB;
+
+        b = 0;
+
+        brd_map[BRD_HEAD][b++] = j++;
+        brd_map[BRD_HEAD][b++] = j++;
+        brd_map[BRD_HEAD][b++] = EOB;
+
+        /////////////////////////////
+
+        j = b = 0;
+
+        wrp_map[WRP_TORSO][b++] = j++;
+        wrp_map[WRP_TORSO][b++] = j++;
+        wrp_map[WRP_TORSO][b++] = j++;
+
+        b = 0;
+
+        wrp_map[WRP_TORSO_PROSUP][b++] = j++;
+
+        b = 0;
+
+        wrp_map[WRP_LEFT_ARM][b++] = j++;
+        wrp_map[WRP_LEFT_ARM][b++] = j++;
+        wrp_map[WRP_LEFT_ARM][b++] = j++;
+        wrp_map[WRP_LEFT_ARM][b++] = j++;
+        wrp_map[WRP_LEFT_ARM][b++] = j++;
+
+        b = 0;
+
+        wrp_map[WRP_LEFT_ARM_WRIST][b++] = j++;
+        wrp_map[WRP_LEFT_ARM_WRIST][b++] = j++;
+        wrp_map[WRP_LEFT_ARM_WRIST][b++] = j++;
+
+        b = 0;
+
+        wrp_map[WRP_RIGHT_ARM][b++] = j++;
+        wrp_map[WRP_RIGHT_ARM][b++] = j++;
+        wrp_map[WRP_RIGHT_ARM][b++] = j++;
+        wrp_map[WRP_RIGHT_ARM][b++] = j++;
+        wrp_map[WRP_RIGHT_ARM][b++] = j++;
+
+        b = 0;
+
+        wrp_map[WRP_RIGHT_ARM_WRIST][b++] = j++;
+        wrp_map[WRP_RIGHT_ARM_WRIST][b++] = j++;
+        wrp_map[WRP_RIGHT_ARM_WRIST][b++] = j++;
+
+        b = 0;
+
+        wrp_map[WRP_HEAD][b++] = j++;
+        wrp_map[WRP_HEAD][b++] = j++;
+    }
+
 	SafeMotionControl() : RateThread(int(PERIOD*1000.0))
 	{
         robotModel = new icub::robot_model::r1::R1Model();
-
-        lut = robotModel->getJointMap();
 	}
 
     virtual ~SafeMotionControl()
@@ -228,66 +321,82 @@ public:
 
 	bool attachAll(const yarp::dev::PolyDriverList &p)
 	{
+        int njoints = 0;
+
 		for (int i = 0; i < p.size(); ++i)
-		{
-            if (!p[i]->poly->isValid()) return false;
+		{            
+            /* /hardware/motorControl/cer_safe-mc.xml
+            <devices robot = "CER01" build = "1">
+                <device name = "cer_safe_mc" type = "safeMotionControl">
+                <action phase = "startup" level = "7" type = "attach">
+                <paramlist name = "networks">
+                <!--The param value must match the device name in the corresponding emsX file-->
+                <elem name = "safe_board_0"> cer_torso_mc < / elem>
+                <elem name = "safe_board_1"> cer_left_upper_arm_mc < / elem>
+                <elem name = "safe_board_2"> cer_left_lower_arm_mc < / elem>
+                <elem name = "safe_board_3"> cer_right_upper_arm_mc < / elem>
+                <elem name = "safe_board_4"> cer_right_lower_arm_mc < / elem>
+                <elem name = "safe_board_5"> cer_head_mc < / elem>
+                < / paramlist>
+                < / action>
 
-            int part;
+                <action phase = "shutdown" level = "7" type = "detach" / >
 
-            printf("\n%s\n\n", p[i]->key.c_str());
+                < / device>
+            < / devices>
+            */
 
-            if (p[i]->key == "safe_torso") part = TORSO;
-            else if (p[i]->key == "safe_head") part = HEAD;
-            else if (p[i]->key == "safe_left_upper_arm") part = LEFT_UPPER_ARM;
-            else if (p[i]->key == "safe_left_lower_arm") part = LEFT_LOWER_ARM;
-            else if (p[i]->key == "safe_right_upper_arm") part = RIGHT_UPPER_ARM;
-            else if (p[i]->key == "safe_right_lower_arm") part = RIGHT_LOWER_ARM;
-            else continue; // return false;
+            yarp::os::Bottle options = p[i]->poly->getOptions();
 
-            p[i]->poly->view(pEncFbk[part]);
+            yarp::os::ConstString boardname = p[i]->key.c_str();
 
-            if (!pEncFbk[part])
+            char boardtag[16];
+            int boardID = EOB;
+
+            for (int b = 0; b < 16; ++b)
             {
-                printf("\npEncFbk[%d] == NULL\n\n", part);
-                return false;
+                sprintf(boardtag, "safe_board_%d", b);
+
+                if (boardname == boardtag)
+                {
+                    boardID = b;
+                }
             }
 
-            p[i]->poly->view(pPosCtrl[part]);
+            if (boardID == EOB) continue;
 
-            if (!pPosCtrl[part])
+            yarp::dev::PolyDriver* partdrivers = p[i]->poly;
+
+            if (!partdrivers || !partdrivers->isValid())
             {
-                printf("\npPosCtrl[%d] == NULL\n\n", part);
+                printf("\n%s drivers not found\n\n", boardname);
                 return false;
             }
-
-            p[i]->poly->view(pVelCtrl[part]);
-            
-            if (!pVelCtrl[part])
+            else
             {
-                printf("\npVelCtrl[%d] == NULL\n\n", part);
-                return false;
+                printf("\n%s drivers found\n\n", boardname);
             }
 
-            p[i]->poly->view(pDirCtrl[part]);
+            partdrivers->view(pEncoder[boardID]);
+            partdrivers->view(pPosCtrl[boardID]);
+            partdrivers->view(pVelCtrl[boardID]);
+            partdrivers->view(pDirCtrl[boardID]);
+            partdrivers->view(pControl[boardID]);
 
-            if (!pDirCtrl[part])
-            {
-                printf("\npDirCtrl[%d] == NULL\n\n", part);
-                return false;
-            }
+            if (!pEncoder[boardID]) { printf("\npEncoder[%s] == NULL\n\n", boardname); return false; }
+            if (!pPosCtrl[boardID]) { printf("\npPosCtrl[%s] == NULL\n\n", boardname); return false; }
+            if (!pVelCtrl[boardID]) { printf("\npVelCtrl[%s] == NULL\n\n", boardname); return false; }
+            if (!pDirCtrl[boardID]) { printf("\npDirCtrl[%s] == NULL\n\n", boardname); return false; }
+            if (!pControl[boardID]) { printf("\npControl[%s] == NULL\n\n", boardname); return false; }
+		
+            int na;
+            pEncoder[boardID]->getAxes(&na);
+            njoints += na;
+        }
 
-            p[i]->poly->view(pCtrlMode[part]);
-
-            if (!pCtrlMode[part])
-            {
-                printf("\npCtrlMode[%d] == NULL\n\n", part);
-                return false;
-            }
-		}
-
-        mQ.resize(22,1,true);
-	    mV.resize(22,1,true);
-	    mD.resize(22,1,true);
+        mQ.resize(njoints, 1, true);
+	    mV.resize(njoints, 1, true);
+        mD.resize(njoints, 1, true);
 
         start();
 
@@ -307,15 +416,14 @@ public:
     }
 
 protected:
-    enum { TORSO, HEAD, LEFT_UPPER_ARM, LEFT_LOWER_ARM, RIGHT_UPPER_ARM, RIGHT_LOWER_ARM, N_ROBOT_PARTS };
+    enum { BRD_TORSO, BRD_LEFT_UPPER_ARM, BRD_LEFT_LOWER_ARM, BRD_RIGHT_UPPER_ARM, BRD_RIGHT_LOWER_ARM, BRD_HEAD, N_BOARDS };
+    enum { WRP_TORSO, WRP_TORSO_PROSUP, WRP_WRP_HEAD, WRP_LEFT_ARM, WRP_LEFT_ARM_WRIST, WRP_RIGHT_ARM, WRP_RIGHT_ARM_WRIST, WRP_HEAD, N_WRAPPERS };
 
-    yarp::dev::IEncoders         *pEncFbk[N_ROBOT_PARTS];
-
-    yarp::dev::IPositionControl2  *pPosCtrl[N_ROBOT_PARTS];
-    yarp::dev::IVelocityControl2  *pVelCtrl[N_ROBOT_PARTS];
-    yarp::dev::IPositionDirect    *pDirCtrl[N_ROBOT_PARTS];
-
-    yarp::dev::IControlMode2      *pCtrlMode[N_ROBOT_PARTS];
+    yarp::dev::IEncoders          *pEncoder[N_BOARDS];
+    yarp::dev::IPositionControl2  *pPosCtrl[N_BOARDS];
+    yarp::dev::IVelocityControl2  *pVelCtrl[N_BOARDS];
+    yarp::dev::IPositionDirect    *pDirCtrl[N_BOARDS];
+    yarp::dev::IControlMode2      *pControl[N_BOARDS];
 
 	Matrix mQ;
 	Matrix mV;
@@ -325,65 +433,37 @@ protected:
 
 	icub::robot_model::RobotModel* robotModel;
 
-    int **lut;
-
+    int wrp_map[16][16];
+    int brd_map[16][16];
 
     virtual void getPos(Matrix& q)
     {
-        double enc[8];
+        double pos[16];
 
-        pEncFbk[TORSO]->getEncoders(enc);
+        for (int b = 0; b < N_BOARDS; ++b)
+        {
+            pEncoder[b]->getEncoders(pos);
 
-        q(0) = enc[0]; q(1) = enc[1]; q(2) = enc[2]; q(3) = enc[3];
-
-        pEncFbk[LEFT_UPPER_ARM]->getEncoders(enc);
-
-        q(4) = enc[0]; q(5) = enc[1]; q(6) = enc[2]; q(7) = enc[3]; 
-        
-        pEncFbk[LEFT_LOWER_ARM]->getEncoders(enc);
-
-        q(8) = enc[0]; q(9) = enc[1]; q(10) = enc[2]; q(11) = enc[3];
-
-        pEncFbk[RIGHT_UPPER_ARM]->getEncoders(enc);
-
-        q(12) = enc[0]; q(13) = enc[1]; q(14) = enc[2]; q(15) = enc[3];
-
-        pEncFbk[RIGHT_LOWER_ARM]->getEncoders(enc);
-        
-        q(16) = enc[0]; q(17) = enc[1]; q(18) = enc[2]; q(19) = enc[3];
-
-        pEncFbk[HEAD]->getEncoders(enc);
-
-        q(20) = enc[0]; q(21) = enc[1];
+            for (int j = 0; brd_map[b][j] != EOB; ++j)
+            {
+                q(brd_map[b][j]) = pos[j];
+            }
+        }
     }
 
     virtual void getVel(Matrix& v)
     {
-        double enc[8];
+        double vel[16];
 
-        pEncFbk[TORSO]->getEncoderSpeeds(enc);
+        for (int b = 0; b < N_BOARDS; ++b)
+        {
+            pEncoder[b]->getEncoderSpeeds(vel);
 
-        v(0) = enc[0]; v(1) = enc[1]; v(2) = enc[2]; v(3) = enc[3];
-
-        pEncFbk[LEFT_UPPER_ARM]->getEncoderSpeeds(enc);
-
-        v(4) = enc[0]; v(5) = enc[1]; v(6) = enc[2]; v(7) = enc[3]; 
-        
-        pEncFbk[LEFT_LOWER_ARM]->getEncoderSpeeds(enc);
-        
-        v(8) = enc[0]; v(9) = enc[1]; v(10) = enc[2]; v(11) = enc[3];
-
-        pEncFbk[RIGHT_UPPER_ARM]->getEncoderSpeeds(enc);
-
-        v(12) = enc[0]; v(13) = enc[1]; v(14) = enc[2]; v(15) = enc[3]; 
-        
-        pEncFbk[RIGHT_LOWER_ARM]->getEncoderSpeeds(enc);
-        
-        v(16) = enc[0]; v(17) = enc[1]; v(18) = enc[2]; v(19) = enc[3];
-
-        pEncFbk[HEAD]->getEncoderSpeeds(enc);
-
-        v(20) = enc[0]; v(21) = enc[1];
+            for (int j = 0; brd_map[b][j] != EOB; ++j)
+            {
+                v(brd_map[b][j]) = vel[j];
+            }
+        }
     }
 };
 

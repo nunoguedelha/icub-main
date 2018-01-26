@@ -54,9 +54,11 @@ namespace icub
 
 					return Jgrav;
 				}
-
+                /*
                 int bind(std::string part)
                 {
+
+
                     std::size_t found = part.find_last_of("/");
                     part = part.substr(found);
 
@@ -73,7 +75,7 @@ namespace icub
 
                     return -1;
                 }
-
+                */
 				double getBalancing(Vec3 &Force)
 				{
 					static Vec3 C1(0.055 + 0.074, 0.110, 0.0);

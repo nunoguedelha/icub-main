@@ -410,10 +410,17 @@ public:
 		return true;
 	}
 
-    int bind(std::string part)
+    int bind()
     {
-        return robotModel->bind(part);
+        static int part = 0;
+
+        return part++;// return robotModel->bind();
     }
+
+    void map(int part, int wBase, int wTop, int base, int top)
+    {
+    }
+
 
 protected:
     enum { BRD_TORSO, BRD_LEFT_UPPER_ARM, BRD_LEFT_LOWER_ARM, BRD_RIGHT_UPPER_ARM, BRD_RIGHT_LOWER_ARM, BRD_HEAD, N_BOARDS };

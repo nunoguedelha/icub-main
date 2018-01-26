@@ -65,7 +65,7 @@ namespace icub
 
 			virtual int getNDOF() = 0;
 
-            virtual int bind(std::string part) = 0;
+            //virtual int bind(std::string part) = 0;
 
 			void getJointLimits(Matrix &q0, Matrix &q1)
 			{

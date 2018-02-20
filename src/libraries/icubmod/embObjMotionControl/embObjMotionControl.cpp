@@ -4747,6 +4747,13 @@ bool embObjMotionControl::askRemoteValues(eOprotEndpoint_t ep, eOprotEntity_t en
 //                 eOmc_joint_status_target_t*  t_ptr = (eOmc_joint_status_target_t*)valueList[j];
 //                 t_ptr->trgt_openloop = 1000 + 100*j;
 //             }break;
+//             case eoprot_tag_mc_joint_config_pidposition:
+//             {
+//                 eOmc_PID_t *p_ptr = (eOmc_PID_t*)valueList[j];
+//                 p_ptr->kp = _ppids[j].pid.kp;
+//                 p_ptr->kd = _ppids[j].pid.kd;
+//                 p_ptr->ki = _ppids[j].pid.ki;
+//             }break;
 //         };
 //     }
 //     

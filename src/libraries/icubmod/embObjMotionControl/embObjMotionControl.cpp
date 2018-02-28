@@ -421,39 +421,6 @@ bool embObjMotionControl::open(yarp::os::Searchable &config)
 
 
     opened = true;
-    
-//     //solo per TESTING valevale
-//     eOmc_setpoint_t setpoints[_njoints];
-//     eOmc_joint_status_target_t targets[_njoints];
-//     
-//     for(int j=0; j<_njoints; j++)
-//     {
-//         setpoints[j].type = eomc_setpoint_velocity;
-//         setpoints[j].to.openloop.value = (eOmeas_pwm_t)10*j;
-//         targets[j].trgt_openloop = 100*j;
-//     }
-//     
-//     yError() <<" ------------------------- PRIMA ------------------------";
-//     for(int j=0; j<_njoints; j++)
-//     {
-//         yError() << "sp_t= " << setpoints[j].type << " sp_v= " << setpoints[j].to.openloop.value << " t= " << targets[j].trgt_openloop;
-//     }
-//     
-//     yError() <<" ------------------------- fine PRIMA ------------------------";
-//     
-//     
-//     
-//     askRemoteValues(eoprot_endpoint_motioncontrol, eoprot_entity_mc_joint, eoprot_tag_mc_joint_cmmnds_setpoint, setpoints);
-//     askRemoteValues(eoprot_endpoint_motioncontrol, eoprot_entity_mc_joint, eoprot_tag_mc_joint_status_target, targets);
-//     
-//     yError() <<" ------------------------- DOPO ------------------------";
-//     for(int j=0; j<_njoints; j++)
-//     {
-//         yError() << "sp_t= " << setpoints[j].type << " sp_v= " << setpoints[j].to.openloop.value << " t= " << targets[j].trgt_openloop;
-//     }
-//     
-//     yError() <<" ------------------------- fine DOPO ------------------------";
-//     
     return true;
 }
 
@@ -4728,36 +4695,6 @@ bool embObjMotionControl::askRemoteValues(eOprotEndpoint_t ep, eOprotEntity_t en
     }
     
     return ret;
-    
-//     //solo per TESTING valevale
-//     for(int j=0; j<_njoints; j++)
-//     {
-//         switch(tag)
-//         {
-//             case eoprot_tag_mc_joint_cmmnds_setpoint:
-//             {
-//                 eOmc_setpoint_t* s_ptr = (eOmc_setpoint_t *)(valueList[j]);
-//                 
-//                 s_ptr->type = (eOenum08_t)eomc_setpoint_openloop;
-//                 s_ptr->to.openloop.value = (eOmeas_pwm_t)100+ 10*j;
-//             }break;
-//             
-//             case eoprot_tag_mc_joint_status_target:
-//             {
-//                 eOmc_joint_status_target_t*  t_ptr = (eOmc_joint_status_target_t*)valueList[j];
-//                 t_ptr->trgt_openloop = 1000 + 100*j;
-//             }break;
-//             case eoprot_tag_mc_joint_config_pidposition:
-//             {
-//                 eOmc_PID_t *p_ptr = (eOmc_PID_t*)valueList[j];
-//                 p_ptr->kp = _ppids[j].pid.kp;
-//                 p_ptr->kd = _ppids[j].pid.kd;
-//                 p_ptr->ki = _ppids[j].pid.ki;
-//             }break;
-//         };
-//     }
-//     
-//     return true;
 }
 
 

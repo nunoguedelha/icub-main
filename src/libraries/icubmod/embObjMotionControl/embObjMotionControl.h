@@ -304,21 +304,28 @@ private:
     bool helper_setPosPidRaw( int j, const Pid &pid);
     bool helper_getPosPidRaw(int j, Pid *pid);
     bool helper_getPosPidsRaw(Pid *pid);
+    bool helper_getPosPidRaw_pre(int j, Pid *pid);
     
     //used in torque control interface
     bool helper_setTrqPidRaw( int j, const Pid &pid);
     bool helper_getTrqPidRaw(int j, Pid *pid);
     bool helper_getTrqPidsRaw(Pid *pid);
-    
+    bool helper_getTrqPidRaw_pre(int j, Pid *pid);
+
     //used in velocity control interface
     bool helper_setVelPidRaw( int j, const Pid &pid);
     bool helper_getVelPidRaw(int j, Pid *pid);
     bool helper_getVelPidsRaw(Pid *pid);
-    
+    bool helper_getVelPidRaw_pre(int j, Pid *pid);
+
     //used in current control interface
     bool helper_setCurPidRaw(int j, const Pid &pid);
     bool helper_getCurPidRaw(int j, Pid *pid);
     bool helper_getCurPidsRaw(Pid *pid);
+    bool helper_getCurPidRaw_pre(int j, Pid *pid);
+    
+    //extra
+    bool getMotorTorqueParamsRaw_pre(int j, MotorTorqueParameters *params);
     
     
 public:

@@ -1611,16 +1611,22 @@ bool embObjMotionControl::getPidErrorsRaw(const PidControlTypeEnum& pidtype, dou
     return ret;
 }
 
-bool embObjMotionControl::helper_getPosPidRaw(int j, Pid *pid)
+bool embObjMotionControl::helper_getPosPidRaw_pre(int j, Pid *pid)
 {
     eOprotID32_t protid = eoprot_ID_get(eoprot_endpoint_motioncontrol, eoprot_entity_mc_joint, j, eoprot_tag_mc_joint_config_pidposition);
 
     uint16_t size;
-    eOmc_PID_t eoPID = {0};
-    if(!askRemoteValue(protid, &eoPID, size))
+    eOmc_PID_t eoPID = { 0 };
+    if (!askRemoteValue(protid, &eoPID, size))
         return false;
 
     copyPid_eo2iCub(&eoPID, pid);
+    return true;
+}
+
+bool embObjMotionControl::helper_getPosPidRaw(int j, Pid *pid)
+{
+    helper_getPosPidRaw_pre(j, pid);
     
     //printf("helper_getPosPid: kp=%f ki=%f kd=%f\n", pid->kp, pid->ki, pid->kd);
     
@@ -3421,8 +3427,7 @@ bool embObjMotionControl::getRemoteVariableRaw(yarp::os::ConstString key, yarp::
     {
         Bottle& r = val.addList();
         for (int i = 0; i < _njoints; i++)
-        { Pid p;
-          getPidRaw(PidControlTypeEnum::VOCAB_PIDTYPE_POSITION, i, &p);
+        { Pid p; helper_getPosPidRaw_pre(i, &p);
           char buff[1000];
           snprintf(buff, 1000, "J %d : kp %+3.3f ki %+3.3f kd %+3.3f maxint %+3.3f maxout %+3.3f off %+3.3f scale %+3.3f up %+3.3f dwn %+3.3f kff %+3.3f", i, p.kp, p.ki, p.kd, p.max_int, p.max_output, p.offset, p.scale, p.stiction_up_val, p.stiction_down_val, p.kff);
           r.addString(buff);
@@ -3433,7 +3438,7 @@ bool embObjMotionControl::getRemoteVariableRaw(yarp::os::ConstString key, yarp::
     {
         Bottle& r = val.addList();
         for (int i = 0; i < _njoints; i++)
-        { Pid p; getPidRaw(PidControlTypeEnum::VOCAB_PIDTYPE_VELOCITY, i, &p);
+        { Pid p; helper_getVelPidRaw_pre(i, &p);
           char buff[1000];
           snprintf(buff, 1000, "J %d : kp %+3.3f ki %+3.3f kd %+3.3f maxint %+3.3f maxout %+3.3f off %+3.3f scale %+3.3f up %+3.3f dwn %+3.3f kff %+3.3f", i, p.kp, p.ki, p.kd, p.max_int, p.max_output, p.offset, p.scale, p.stiction_up_val, p.stiction_down_val, p.kff);
           r.addString(buff);
@@ -3444,7 +3449,7 @@ bool embObjMotionControl::getRemoteVariableRaw(yarp::os::ConstString key, yarp::
     {
         Bottle& r = val.addList();
         for (int i = 0; i < _njoints; i++)
-        { Pid p; getPidRaw(PidControlTypeEnum::VOCAB_PIDTYPE_TORQUE, i, &p);
+        { Pid p; helper_getTrqPidRaw_pre(i, &p);
          char buff[1000];
          snprintf(buff, 1000, "J %d : kp %+3.3f ki %+3.3f kd %+3.3f maxint %+3.3f maxout %+3.3f off %+3.3f scale %+3.3f up %+3.3f dwn %+3.3f kff %+3.3f", i, p.kp, p.ki, p.kd, p.max_int, p.max_output, p.offset, p.scale, p.stiction_up_val, p.stiction_down_val, p.kff);
          r.addString(buff);
@@ -3455,7 +3460,7 @@ bool embObjMotionControl::getRemoteVariableRaw(yarp::os::ConstString key, yarp::
     {
         Bottle& r = val.addList();
         for (int i = 0; i < _njoints; i++)
-        { Pid p; getPidRaw(PidControlTypeEnum::VOCAB_PIDTYPE_CURRENT, i, &p);
+        { Pid p; helper_getCurPidRaw_pre(i, &p);
          char buff[1000];
          snprintf(buff, 1000, "J %d : kp %+3.3f ki %+3.3f kd %+3.3f maxint %+3.3f maxout %+3.3f off %+3.3f scale %+3.3f up %+3.3f dwn %+3.3f kff %+3.3f", i, p.kp, p.ki, p.kd, p.max_int, p.max_output, p.offset, p.scale, p.stiction_up_val, p.stiction_down_val, p.kff);
          r.addString(buff);
@@ -3468,7 +3473,7 @@ bool embObjMotionControl::getRemoteVariableRaw(yarp::os::ConstString key, yarp::
         for (int i = 0; i < _njoints; i++)
         {
             MotorTorqueParameters params;
-            getMotorTorqueParamsRaw(i, &params);
+            getMotorTorqueParamsRaw_pre(i, &params);
             char buff[1000];
             snprintf(buff, 1000, "J %d : bemf %+3.3f bemf_scale %+3.3f ktau %+3.3f ktau_scale %+3.3f ", i, params.bemf, params.bemf_scale, params.ktau, params.ktau_scale);
             r.addString(buff);
@@ -3753,17 +3758,24 @@ bool embObjMotionControl::helper_setTrqPidRaw(int j, const Pid &pid)
     return res->setRemoteValue(protid, &outPid);
 }
 
-bool embObjMotionControl::helper_getTrqPidRaw(int j, Pid *pid)
+bool embObjMotionControl::helper_getTrqPidRaw_pre(int j, Pid *pid)
 {
-    //_mutex.wait();
     eOprotID32_t protoid = eoprot_ID_get(eoprot_endpoint_motioncontrol, eoprot_entity_mc_joint, j, eoprot_tag_mc_joint_config_pidtorque);
 
     uint16_t size;
     eOmc_PID_t eoPID;
-    if(! askRemoteValue(protoid, &eoPID, size))
+    if (!askRemoteValue(protoid, &eoPID, size))
         return false;
-    
     copyPid_eo2iCub(&eoPID, pid);
+    return true;
+}
+
+bool embObjMotionControl::helper_getTrqPidRaw(int j, Pid *pid)
+{
+    //_mutex.wait();
+    helper_getTrqPidRaw_pre(j, pid);
+
+
     //printf("DEBUG getTorquePidRaw: %f %f %f %f %f\n",pid->kp , pid->ki, pid->kd , pid->stiction_up_val , pid->stiction_down_val );
 
     _measureConverter->convertTrqPid_S2N(j, *pid);
@@ -3893,19 +3905,29 @@ bool embObjMotionControl::setBemfParamRaw(int j, double bemf)
     return DEPRECATED("setBemfParamRaw");
 }
 
-bool embObjMotionControl::getMotorTorqueParamsRaw(int j, MotorTorqueParameters *params)
+bool embObjMotionControl::getMotorTorqueParamsRaw_pre(int j, MotorTorqueParameters *params)
 {
     eOprotID32_t protoid = eoprot_ID_get(eoprot_endpoint_motioncontrol, eoprot_entity_mc_joint, j, eoprot_tag_mc_joint_config_motor_params);
 
     uint16_t size;
-    eOmc_motor_params_t eo_params = {0};
-    if(! askRemoteValue(protoid, &eo_params, size))
+    eOmc_motor_params_t eo_params = { 0 };
+    if (!askRemoteValue(protoid, &eo_params, size))
         return false;
 
-    params->bemf       = _measureConverter->convertTrqMotorBemfParam_MachineUnitsToMetric(j, eo_params.bemf_value);
+    params->bemf = eo_params.bemf_value;
     params->bemf_scale = eo_params.bemf_scale;
-    params->ktau       = _measureConverter->convertTrqMotorKtaufParam_MachineUnitsToMetric(j, eo_params.ktau_value);   //eo_params.ktau_value * _torqueControlHelper->getNewtonsToSensor(j);  //[PWM/Nm]
+    params->ktau = eo_params.ktau_value;
     params->ktau_scale = eo_params.ktau_scale;
+
+    return true;
+}
+
+bool embObjMotionControl::getMotorTorqueParamsRaw(int j, MotorTorqueParameters *params)
+{
+    getMotorTorqueParamsRaw_pre(j, params);
+
+    params->bemf       = _measureConverter->convertTrqMotorBemfParam_MachineUnitsToMetric(j, params->bemf);
+    params->ktau       = _measureConverter->convertTrqMotorKtaufParam_MachineUnitsToMetric(j, params->ktau);   //eo_params.ktau_value * _torqueControlHelper->getNewtonsToSensor(j);  //[PWM/Nm]
     //printf("debug getMotorTorqueParamsRaw %f %f %f %f\n",  params->bemf, params->bemf_scale, params->ktau,params->ktau_scale);
 
     return true;
@@ -3982,15 +4004,21 @@ bool embObjMotionControl::helper_setVelPidRaw(int j, const Pid &pid)
     return NOT_YET_IMPLEMENTED("Our boards do not have a Velocity Pid");
 }
 
-bool embObjMotionControl::helper_getVelPidRaw(int j, Pid *pid)
+bool embObjMotionControl::helper_getVelPidRaw_pre(int j, Pid *pid)
 {
     eOprotID32_t protoid = eoprot_ID_get(eoprot_endpoint_motioncontrol, eoprot_entity_mc_joint, j, eoprot_tag_mc_joint_config_pidvelocity);
     uint16_t size;
     eOmc_PID_t eoPID;
-    if(! askRemoteValue(protoid, &eoPID, size))
+    if (!askRemoteValue(protoid, &eoPID, size))
         return false;
 
     copyPid_eo2iCub(&eoPID, pid);
+    return true;
+}
+
+bool embObjMotionControl::helper_getVelPidRaw(int j, Pid *pid)
+{
+    helper_getVelPidRaw_pre(j, pid);
 
 
     if(_vpids[j].ctrlUnitsType == controlUnits_metric)
@@ -4968,7 +4996,7 @@ bool embObjMotionControl::helper_setCurPidRaw(int j, const Pid &pid)
 }
 
 
-bool embObjMotionControl::helper_getCurPidRaw(int j, Pid *pid)
+bool embObjMotionControl::helper_getCurPidRaw_pre(int j, Pid *pid)
 {
     eOprotID32_t protoid = eoprot_ID_get(eoprot_endpoint_motioncontrol, eoprot_entity_mc_motor, j, eoprot_tag_mc_motor_config);
     uint16_t size;
@@ -4979,6 +5007,12 @@ bool embObjMotionControl::helper_getCurPidRaw(int j, Pid *pid)
     // refresh cached value when reading data from the EMS
     eOmc_PID_t tmp = (eOmc_PID_t)motor_cfg.pidcurrent;
     copyPid_eo2iCub(&tmp, pid);
+    return true;
+}
+
+bool embObjMotionControl::helper_getCurPidRaw(int j, Pid *pid)
+{
+    helper_getCurPidRaw_pre(j, pid);
 
     return true;
 }
